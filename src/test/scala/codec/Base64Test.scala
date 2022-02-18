@@ -9,7 +9,8 @@ class Base64Test extends AnyFlatSpec with ChiselScalatestTester {
 
 
   it should "do nothing" in {
-    test(new Base64) { dut =>
+    val params = Base64Params()
+    test(new Base64(params)) { dut =>
         // do nothing
     }
   }

@@ -9,5 +9,5 @@ sbt test
 
 ### Autoformat the code
 ```console
-sbt scalafmtSbt
+scripts/format
 ```
