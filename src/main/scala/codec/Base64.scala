@@ -30,14 +30,14 @@ class Base64(val p: Base64Params) extends Module {
     // Algorithm:
     // Take 3 bytes from input, divide them into four 6bit value
     // each 6bit value mapps index-0 to a base64 character
-    val (index, wrapped) = Counter(0 until p.sizeInBytes by 3, true.B, true.B)
-    val (outputIndex, outputIndexWrapped) = Counter(0 until p.paddedLength by 4, true.B, true.B)
+    val (index, wrapped) = Counter(0 until p.sizeInBytes by 3, true.B, false.B)
+    val (outputIndex, outputIndexWrapped) = Counter(0 until p.paddedLength by 4, true.B, false.B)
 
     // Note: bit field access is inclusive (0, 7) since it's a byte
     val byte1 = mapping(io.input(index)(7, 2))
     val byte2 = mapping(Cat(io.input(index)(1, 0), io.input(index + 1.U)(7, 4)))
     val byte3 = mapping(Cat(io.input(index + 1.U)(3, 0), io.input(index + 2.U)(7, 6)))
-    val byte4 = mapping(io.input(index + 3.U)(5, 0))
+    val byte4 = mapping(io.input(index + 2.U)(5, 0))
 
     io.output.valid := true.B
     io.output.bits := DontCare
@@ -46,5 +46,5 @@ class Base64(val p: Base64Params) extends Module {
     io.output.bits(outputIndex + 2.U) := byte3
     io.output.bits(outputIndex + 3.U) := byte4
 
-    printf(p"output: ${io.output.bits}")
+    printf(p"index: ${index} output: ${io.output.bits}\n")
 }
