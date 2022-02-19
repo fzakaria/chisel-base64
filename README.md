@@ -4,7 +4,7 @@
 
 ### Test thhe code
 ```console
-sbt test
+scripts/test
 ```
 
 ### Autoformat the code
