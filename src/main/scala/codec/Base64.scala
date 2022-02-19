@@ -25,6 +25,19 @@ class Base64(val p: Base64Params) extends Module {
         val output = Valid(Vec(p.paddedLength, Byte()))
     })
 
+    // Helpful method to read an index (byte) off a vector.
+    // It simply checks if the index is passed the length and returns
+    // a 0 (null byte).
+    def read_byte(index: UInt, vec: Vec[UInt]): UInt = {
+        val byte = Wire(Byte())
+        when(index < vec.length.U) {
+            byte := vec(index)
+        }.otherwise {
+            byte := 0.U(8.W)
+        }
+        return byte
+    }
+
     val mapping = VecInit(p.base64Chars.map(_.toByte.U(8.W)))
 
     // Algorithm:
@@ -34,17 +47,19 @@ class Base64(val p: Base64Params) extends Module {
     val (outputIndex, outputIndexWrapped) = Counter(0 until p.paddedLength by 4, true.B, false.B)
 
     // Note: bit field access is inclusive (0, 7) since it's a byte
-    val byte1 = mapping(io.input(index)(7, 2))
-    val byte2 = mapping(Cat(io.input(index)(1, 0), io.input(index + 1.U)(7, 4)))
-    val byte3 = mapping(Cat(io.input(index + 1.U)(3, 0), io.input(index + 2.U)(7, 6)))
-    val byte4 = mapping(io.input(index + 2.U)(5, 0))
+    val byte1 = mapping(read_byte(index, io.input)(7, 2))
+    val byte2 = mapping(Cat(read_byte(index, io.input)(1, 0), read_byte(index + 1.U, io.input)(7, 4)))
+    val byte3 = mapping(Cat(read_byte(index + 1.U, io.input)(3, 0), read_byte(index + 2.U, io.input)(7, 6)))
+    val byte4 = mapping(read_byte(index + 2.U, io.input)(5, 0))
+
+    val equalsChar = '='.toByte.U(8.W)
 
     io.output.valid := true.B
     io.output.bits := DontCare
     io.output.bits(outputIndex) := byte1
     io.output.bits(outputIndex + 1.U) := byte2
-    io.output.bits(outputIndex + 2.U) := byte3
-    io.output.bits(outputIndex + 3.U) := byte4
+    io.output.bits(outputIndex + 2.U) := Mux(index + 1.U >= io.input.length.U, equalsChar, byte3)
+    io.output.bits(outputIndex + 3.U) := Mux(index + 2.U >= io.input.length.U, equalsChar, byte4)
 
     printf(p"index: ${index} output: ${io.output.bits}\n")
 }
