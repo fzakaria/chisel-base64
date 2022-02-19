@@ -11,6 +11,8 @@ case class Base64Params(val sizeInBytes: Int) {
     // ref: https://stackoverflow.com/a/49633849/143733
     val paddedLength : Int = 4 * Math.ceil(sizeInBytes / 3.0).toInt
 
+    // TODO: Make this a parameterized input
+    // make sure to assert that the input is 64 characters long.
     val base64Chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 }
 
