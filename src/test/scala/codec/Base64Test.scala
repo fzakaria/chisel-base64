@@ -26,7 +26,7 @@ class WrapperInterface {
         dut.io.input.bits(i).poke(c)
       }
       dut.io.input.valid.poke(true.B)
-      while ((dut.io.output.valid.peek().litValue() == 0)) dut.clock.step()
+      while ((dut.io.output.valid.peek().litValue == 0)) dut.clock.step()
       for ((c, i) <- encoded.zipWithIndex) {
         dut.io.output.bits(i).expect(c.U(8.W))
       }
@@ -59,6 +59,7 @@ class Base64WrapperTest extends AnyFlatSpec with ChiselScalatestTester {
       t.Base64WrapperTest(dut, lol, 3)
       t.Base64WrapperTest(dut, school, 3)
       t.Base64WrapperTest(dut, marquez, 3)
+      t.Base64WrapperTest(dut, herbert, 3)
     }
   }
 }
