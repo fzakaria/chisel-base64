@@ -31,11 +31,8 @@ class Base64(val p: Base64Params) extends Module {
   // a 0 (null byte).
   def read_byte(index: UInt, vec: Vec[UInt]): UInt = {
     val byte = Wire(Byte())
-    when(index < vec.length.U) {
-      byte := vec(index)
-    }.otherwise {
-      byte := 0.U(8.W)
-    }
+    // a bit more concise, perhaps harder to read?
+    byte := Mux(index < vec.length.U, vec(index), 0.U(8.W))
     return byte
   }
 
@@ -43,7 +40,7 @@ class Base64(val p: Base64Params) extends Module {
 
   // Algorithm:
   // Take 3 bytes from input, divide them into four 6bit value
-  // each 6bit value mapps index-0 to a base64 character
+  // each 6bit value maps index-0 to a base64 character
   val (index, wrapped) = Counter(0 until p.sizeInBytes by 3, true.B, false.B)
   val (outputIndex, outputIndexWrapped) =
     Counter(0 until p.paddedLength by 4, true.B, false.B)
@@ -85,6 +82,6 @@ class Base64(val p: Base64Params) extends Module {
   )
 
   printf(
-    p"index: ${index} output: ${io.output.bits}\n"
+    p"input: ${io.input} output: ${io.output.bits}\n"
   )
 }
