@@ -5,11 +5,11 @@
 * Generator config for controlling the 64 characters
 * Testing for corner cases
 * Base64 encoding support with padding
+* Generator specification to control bytes per clock (Base64Wrapper)
 
 ## What remains?
 * Try to integrate ScalaCheck
 * CRC calculation
-* Generator specification to control bytes per clock
 * Decode
 
 ## How to?
