@@ -14,9 +14,8 @@ case class Base64WrapperParams(val bytesPerCycle: Int = 3,
   val paddedLength: Int = 4 * Math.ceil(bytesPerCycle / 3.0).toInt
 }
 
-// This is a state machine that utilizes the Base64 module. It takes in the same
-// Base64Params but utilizes the bytePerCycle parameter. This state machine
-// instantiates an instance of the Base64 module.
+// This is a state machine that utilizes the Base64 module. It takes in
+// bytesPerCycle chars at a time and streams them into the instantiated Base64 module.
 class Base64Wrapper(p: Base64WrapperParams) extends Module {
   def Byte() = UInt(8.W)
 
