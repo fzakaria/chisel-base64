@@ -10,12 +10,14 @@ object Base64Wrapper {
 case class Base64WrapperParams(val bytesPerCycle: Int = 3,
                                val base64Chars: String = Base64Params.DEFAULT_BASE_CHARS) {
   require(bytesPerCycle > 0)
+  require(bytesPerCycle % 3 == 0)
   require(base64Chars.length == 64)
   val paddedLength: Int = 4 * Math.ceil(bytesPerCycle / 3.0).toInt
+  val numBase64Mods: Int = bytesPerCycle / 3
 }
 
 // This is a state machine that utilizes the Base64 module. It takes in
-// bytesPerCycle chars at a time and streams them into the instantiated Base64 module.
+// bytesPerCycle chars at a time and streams them into the instantiated Base63 module.
 class Base64Wrapper(p: Base64WrapperParams) extends Module {
   def Byte() = UInt(8.W)
 
@@ -29,15 +31,21 @@ class Base64Wrapper(p: Base64WrapperParams) extends Module {
   })
 
 
-  // Base64 instantiation
-  val params = Base64Params(p.bytesPerCycle, p.base64Chars)
-  val b64 = Module(new Base64(params))
-  io.input.bits.zipWithIndex foreach { case(b, i) => b64.io.input(i) := b }
+  // instantiate Seq of Base64 Modules
+  val b64params = Base64Params(3, p.base64Chars) // always take in 3 bytes
+  val b64mods = Seq.fill(p.numBase64Mods)(Module(new Base64(b64params)))
+  val equalsChar = '='.toByte.U(8.W)
+  b64mods.zipWithIndex foreach {
+    case (b, i) => {
+      for (j <- 0 until 3) {
+        b.io.input(j) := io.input.bits((3 * i) + j)
+      }
+    }
+  }
 
   // default values
   io.output.valid := false.B
   io.output.bits := DontCare
-  val equalsChar = '='.toByte.U(8.W)
 
 
   // main switch statement
@@ -49,10 +57,17 @@ class Base64Wrapper(p: Base64WrapperParams) extends Module {
       }
     }
     is (working) {
-      when (b64.io.output.valid) {
+      when (b64mods(0).io.output.valid) {
         state := idle
         io.output.valid := true.B
-        io.output.bits := b64.io.output.bits
+        b64mods.zipWithIndex foreach {
+          case (b, i) => {
+            for (j <- 0 until 4) {
+              io.output.bits((4 * i) + j) := b.io.output.bits(j)
+            }
+          }
+        }
+
       }
     }
   }
