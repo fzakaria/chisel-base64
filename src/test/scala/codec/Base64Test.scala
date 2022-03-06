@@ -7,16 +7,17 @@ import java.nio.charset.Charset;
 import org.scalacheck.Gen
 import org.scalacheck.Prop.forAll
 
+// code that interfaces with Base64Wrapper module and tests functionality
 class WrapperInterface {
   def Base64WrapperTest(dut: Base64Wrapper, inputStr: String, bytesPerCycle: Int): Unit = {
     val params = Base64WrapperParams(bytesPerCycle, Base64Params.DEFAULT_BASE_CHARS)
     var allInputs = inputStr
     val numInputs = Math.ceil(allInputs.length / params.bytesPerCycle.toFloat)
-
     for (i <- 0 until numInputs.toInt) {
       var currentInputs = allInputs.take(params.bytesPerCycle)
       allInputs = allInputs.drop(params.bytesPerCycle)
-      while(currentInputs.size != params.bytesPerCycle) {
+
+      while(currentInputs.size != params.bytesPerCycle) { // pad input on last cycle
         currentInputs = currentInputs.concat("=")
       }
 
@@ -37,29 +38,29 @@ class WrapperInterface {
 class Base64WrapperTest extends AnyFlatSpec with ChiselScalatestTester {
   behavior of "Base64Wrapper"
 
-  it should "stream in bytesPerCycle bytes at a time to a Base64 module" in {
+  // input strings
+  val lol     = "lol"
+  val ucsc    = "University of California Santa Cruz"
+  val marquez = "Many years later as he faced the firing squad colonel Aureliano Buendia " +
+                "was to remember that distant afternoon when his father took him to discover ice"
+  val herbert = "He felt the bubble lift him, felt it break and the dust whirlpool engulf him, " +
+                "dragging him down into cool darkness. For a moment, the sensation of coolness " +
+                "and the moisture were blessed relief. Then, as his planet killed him, it occurred " +
+                "to Kynes that his father and all the other scientists were wrong, that the most " +
+                "persistent principles of the universe were accident and error. " +
+                "Even the hawks could appreciate these facts."
 
-    // some sample input strings
-    val lol = "lol"
-    val school = "University of California Santa Cruz"
-    val marquez = "Many years later as he faced the firing squad colonel Aureliano Buendia " +
-                  "was to remember that distant afternoon when his father took him to discover ice"
-    val herbert = "He felt the bubble lift him, felt it break and the dust whirlpool engulf him, " +
-                  "dragging him down into cool darkness. For a moment, the sensation of coolness " +
-                  "and the moisture were blessed relief. Then, as his planet killed him, it occurred " +
-                  "to Kynes that his father and all the other scientists were wrong, that the most " +
-                  "persistent principles of the universe were accident and error. " +
-                  "Even the hawks could appreciate these facts."
-
-    val params = Base64WrapperParams(3, Base64Params.DEFAULT_BASE_CHARS)
-
-    val t = new WrapperInterface
-
-    test(new Base64Wrapper(params)) { dut =>
-      t.Base64WrapperTest(dut, lol, 3)
-      t.Base64WrapperTest(dut, school, 3)
-      t.Base64WrapperTest(dut, marquez, 3)
-      t.Base64WrapperTest(dut, herbert, 3)
+  // test the Base64Wrapper state machine one different input strings with different input sizes
+  val t = new WrapperInterface
+  for (bpc <- 3 to 12 by 3) {
+    it should s"stream in ${bpc} bytes at a time to a Base64 module" in {
+      val params = Base64WrapperParams(bpc, Base64Params.DEFAULT_BASE_CHARS)
+      test(new Base64Wrapper(params)) { dut =>
+        t.Base64WrapperTest(dut, lol, params.bytesPerCycle)
+        t.Base64WrapperTest(dut, ucsc, params.bytesPerCycle)
+        t.Base64WrapperTest(dut, marquez, params.bytesPerCycle)
+        t.Base64WrapperTest(dut, herbert, params.bytesPerCycle)
+      }
     }
   }
 }
