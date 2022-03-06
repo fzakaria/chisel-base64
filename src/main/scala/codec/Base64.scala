@@ -81,7 +81,8 @@ class Base64(val p: Base64Params) extends Module {
     byte4
   )
 
-  printf(
-    p"input: ${io.input} output: ${io.output.bits}\n"
-  )
+  // debugging
+  //printf(
+  //  p"input: ${io.input} output: ${io.output.bits}\n"
+  //)
 }
