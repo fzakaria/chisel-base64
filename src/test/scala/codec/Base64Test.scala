@@ -201,7 +201,7 @@ class Base64Test extends AnyFlatSpec with ChiselScalatestTester {
   }
 
   it should "do a simple decode of 8 characters" in {
-    val str = "YWJjZGVm"
+    val str = "YWJjZGVmZ2hp"
     val decoded = java.util.Base64.getDecoder.decode(str)
     // println( (decoded.map(_.toChar)).mkString )
     val params = Base64DecodingParams(str.length, Base64Params.DEFAULT_BASE_CHARS)
@@ -211,8 +211,13 @@ class Base64Test extends AnyFlatSpec with ChiselScalatestTester {
       }
 
       dut.io.output.valid.expect(true.B)
-      for ((c, i) <- decoded.zipWithIndex) {
-        dut.io.output.bits(i).expect(c.U(8.W))
+
+      for (i <- 0 until decoded.length by 3) {
+        dut.io.output.bits(i).expect(decoded(i).U(8.W))
+        dut.io.output.bits(i + 1).expect(decoded(i + 1).U(8.W))
+        dut.io.output.bits(i + 2).expect(decoded(i + 2).U(8.W))
+
+        dut.clock.step()
       }
     }
   }

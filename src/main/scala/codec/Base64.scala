@@ -49,10 +49,10 @@ class Base64Decoder(val p: Base64DecodingParams) extends Module {
     Counter(0 until p.maxDecodedLength by 3, true.B, false.B)
     
   // Note: these can be limited to 6 width bits
-  val char1 = mapping.indexWhere(_ === io.input(index))
-  val char2 = mapping.indexWhere(_ === io.input(index +& 1.U))
-  val char3 = mapping.indexWhere(_ === io.input(index +& 2.U))
-  val char4 = mapping.indexWhere(_ === io.input(index +& 3.U))
+  val char1 = mapping.indexWhere(_ === io.input(index))(5, 0)
+  val char2 = mapping.indexWhere(_ === io.input(index +& 1.U))(5, 0)
+  val char3 = mapping.indexWhere(_ === io.input(index +& 2.U))(5, 0)
+  val char4 = mapping.indexWhere(_ === io.input(index +& 3.U))(5, 0)
 
   val byte1 = Cat(char1(5, 0), char2(5, 4))
   val byte2 = Cat(char2(3, 0), char3(5, 2))
@@ -63,6 +63,11 @@ class Base64Decoder(val p: Base64DecodingParams) extends Module {
   io.output.bits(outputIndex) := byte1
   io.output.bits(outputIndex +& 1.U) := byte2
   io.output.bits(outputIndex +& 2.U) := byte3
+
+  // debugging
+  printf(
+   p"input: ${io.input} output: ${io.output.bits}\n"
+  )
 }
 
 class Base64Encoder(val p: Base64EncodingParams) extends Module {
