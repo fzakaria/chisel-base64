@@ -81,6 +81,8 @@ class Base64Test extends AnyFlatSpec with ChiselScalatestTester {
     // Note: This technically just maps a single character to a byte
     // I don't think this is technically correct since it can be a base16 ?
     test(new Base64(params)) { dut =>
+      dut.io.mode.poke(false.B)
+
       for ((c, i) <- str.zipWithIndex) {
         dut.io.input(i).poke(c.toByte.U(8.W))
       }
@@ -99,6 +101,8 @@ class Base64Test extends AnyFlatSpec with ChiselScalatestTester {
     // Note: This technically just maps a single character to a byte
     // I don't think this is technically correct since it can be a base16 ?
     test(new Base64(params)) { dut =>
+      dut.io.mode.poke(false.B)
+
       for ((c, i) <- str.zipWithIndex) {
         dut.io.input(i).poke(c.toByte.U(8.W))
       }
@@ -117,6 +121,8 @@ class Base64Test extends AnyFlatSpec with ChiselScalatestTester {
     // Note: This technically just maps a single character to a byte
     // I don't think this is technically correct since it can be a base16 ?
     test(new Base64(params)) { dut =>
+      dut.io.mode.poke(false.B)
+
       for ((c, i) <- str.zipWithIndex) {
         dut.io.input(i).poke(c.toByte.U(8.W))
       }
@@ -135,6 +141,8 @@ class Base64Test extends AnyFlatSpec with ChiselScalatestTester {
     // Note: This technically just maps a single character to a byte
     // I don't think this is technically correct since it can be a base16 ?
     test(new Base64(params)).withAnnotations(Seq(WriteVcdAnnotation)) { dut =>
+      dut.io.mode.poke(false.B)
+
       for ((c, i) <- str.zipWithIndex) {
         dut.io.input(i).poke(c.toByte.U(8.W))
       }
@@ -158,6 +166,7 @@ class Base64Test extends AnyFlatSpec with ChiselScalatestTester {
     // Note: This technically just maps a single character to a byte
     // I don't think this is technically correct since it can be a base16 ?
     test(new Base64(params)) { dut =>
+      dut.io.mode.poke(false.B)
       for ((c, i) <- str.zipWithIndex) {
         dut.io.input(i).poke(c.toByte.U(8.W))
       }

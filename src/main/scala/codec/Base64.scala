@@ -17,8 +17,7 @@ case class Base64Params(val sizeInBytes: Int, val base64Chars: String) {
   val paddedLength: Int = 4 * Math.ceil(sizeInBytes / 3.0).toInt
 }
 
-class Base64(val p: Base64Params) extends Module {
-
+class Base64Encoder(val p: Base64Params) extends Module {
   def Byte() = UInt(8.W)
 
   val io = IO(new Bundle {
@@ -80,6 +79,27 @@ class Base64(val p: Base64Params) extends Module {
     equalsChar,
     byte4
   )
+}
+
+class Base64(val p: Base64Params) extends Module {
+
+  def Byte() = UInt(8.W)
+
+  val io = IO(new Bundle {
+    val input = Input(Vec(p.sizeInBytes, Byte()))
+    // false => encode
+    // true => decode
+    val mode = Input(Bool())
+    val output = Valid(Vec(p.paddedLength, Byte()))
+  })
+
+  when(io.mode) {
+    io.output := DontCare
+  }.otherwise {
+    val encoder = Module(new Base64Encoder(p))
+    encoder.io.input := io.input
+    io.output := encoder.io.output
+  }
 
   // debugging
   //printf(

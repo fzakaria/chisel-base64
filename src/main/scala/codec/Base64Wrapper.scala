@@ -27,6 +27,9 @@ class Base64Wrapper(p: Base64WrapperParams) extends Module {
 
   val io = IO(new Bundle {
     val input = Flipped(Valid(Vec(p.bytesPerCycle, Byte())))
+    // false => encode
+    // true => decode
+    val mode = Input(Bool())
     val output = Valid(Vec(p.paddedLength, Byte()))
   })
 
@@ -37,6 +40,10 @@ class Base64Wrapper(p: Base64WrapperParams) extends Module {
   val equalsChar = '='.toByte.U(8.W)
   b64mods.zipWithIndex foreach {
     case (b, i) => {
+      
+      // copy over the mode
+      b.io.mode := io.mode
+
       for (j <- 0 until 3) {
         b.io.input(j) := io.input.bits((3 * i) + j)
       }
