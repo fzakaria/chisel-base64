@@ -8,7 +8,13 @@ object Base64Params {
     "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"
 }
 
-case class Base64Params(val sizeInBytes: Int, val base64Chars: String) {
+abstract class Base64Params {
+  def sizeInBytes: Int
+  def base64Chars : String
+  val paddingChar = '='
+}
+
+case class Base64EncodingParams(val sizeInBytes: Int, val base64Chars: String) extends Base64Params {
   require(sizeInBytes > 0)
   require(base64Chars.length == 64)
   // We need to divide by 3 since 4 digits can represent 3 bytes
@@ -17,7 +23,49 @@ case class Base64Params(val sizeInBytes: Int, val base64Chars: String) {
   val paddedLength: Int = 4 * Math.ceil(sizeInBytes / 3.0).toInt
 }
 
-class Base64Encoder(val p: Base64Params) extends Module {
+case class Base64DecodingParams(val sizeInBytes: Int, val base64Chars: String) extends Base64Params {
+  require(sizeInBytes > 0)
+  require(base64Chars.length == 64)
+
+  // the maximum length will be to divide into 4 characters which represent 3 octets.
+  // this is the maximum because there can be padding
+  val maxDecodedLength : Int = 3 * (sizeInBytes / 4.0).toInt
+}
+
+class Base64Decoder(val p: Base64DecodingParams) extends Module {
+  def Byte() = UInt(8.W)
+
+  val io = IO(new Bundle {
+    val input = Input(Vec(p.sizeInBytes, Byte()))
+    val output = Valid(Vec(p.maxDecodedLength, Byte()))
+  })
+
+  val mapping = VecInit(p.base64Chars.map(_.toByte.U(8.W)))
+
+  // iterate every 4 which should be complete
+  // since we assume this handles padded
+  val (index, wrapped) = Counter(0 until p.sizeInBytes by 4, true.B, false.B)
+  val (outputIndex, outputIndexWrapped) =
+    Counter(0 until p.maxDecodedLength by 3, true.B, false.B)
+    
+  // Note: these can be limited to 6 width bits
+  val char1 = mapping.indexWhere(_ === io.input(index))
+  val char2 = mapping.indexWhere(_ === io.input(index +& 1.U))
+  val char3 = mapping.indexWhere(_ === io.input(index +& 2.U))
+  val char4 = mapping.indexWhere(_ === io.input(index +& 3.U))
+
+  val byte1 = Cat(char1(5, 0), char2(5, 4))
+  val byte2 = Cat(char2(3, 0), char3(5, 2))
+  val byte3 = Cat(char3(1, 0), char4(5, 0))
+
+  io.output.valid := true.B
+  io.output.bits := DontCare
+  io.output.bits(outputIndex) := byte1
+  io.output.bits(outputIndex +& 1.U) := byte2
+  io.output.bits(outputIndex +& 2.U) := byte3
+}
+
+class Base64Encoder(val p: Base64EncodingParams) extends Module {
   def Byte() = UInt(8.W)
 
   val io = IO(new Bundle {
@@ -63,7 +111,7 @@ class Base64Encoder(val p: Base64Params) extends Module {
   )
   val byte4 = mapping(read_byte(index +& 2.U, io.input)(5, 0))
 
-  val equalsChar = '='.toByte.U(8.W)
+  val equalsChar = p.paddingChar.toByte.U(8.W)
 
   io.output.valid := true.B
   io.output.bits := DontCare
@@ -79,30 +127,9 @@ class Base64Encoder(val p: Base64Params) extends Module {
     equalsChar,
     byte4
   )
-}
-
-class Base64(val p: Base64Params) extends Module {
-
-  def Byte() = UInt(8.W)
-
-  val io = IO(new Bundle {
-    val input = Input(Vec(p.sizeInBytes, Byte()))
-    // false => encode
-    // true => decode
-    val mode = Input(Bool())
-    val output = Valid(Vec(p.paddedLength, Byte()))
-  })
-
-  when(io.mode) {
-    io.output := DontCare
-  }.otherwise {
-    val encoder = Module(new Base64Encoder(p))
-    encoder.io.input := io.input
-    io.output := encoder.io.output
-  }
 
   // debugging
-  //printf(
+  // printf(
   //  p"input: ${io.input} output: ${io.output.bits}\n"
-  //)
+  // )
 }

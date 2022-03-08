@@ -9,19 +9,25 @@ import org.scalacheck.Prop.forAll
 
 // code that interfaces with Base64Wrapper module and tests functionality
 class WrapperInterface {
-  def Base64WrapperTest(dut: Base64Wrapper, inputStr: String, bytesPerCycle: Int): Unit = {
-    val params = Base64WrapperParams(bytesPerCycle, Base64Params.DEFAULT_BASE_CHARS)
+  def Base64WrapperTest(
+      dut: Base64Wrapper,
+      inputStr: String,
+      bytesPerCycle: Int
+  ): Unit = {
+    val params =
+      Base64WrapperParams(bytesPerCycle, Base64Params.DEFAULT_BASE_CHARS)
     var allInputs = inputStr
     val numInputs = Math.ceil(allInputs.length / params.bytesPerCycle.toFloat)
     for (i <- 0 until numInputs.toInt) {
       var currentInputs = allInputs.take(params.bytesPerCycle)
       allInputs = allInputs.drop(params.bytesPerCycle)
 
-      while(currentInputs.size != params.bytesPerCycle) { // pad input on last cycle
+      while (currentInputs.size != params.bytesPerCycle) { // pad input on last cycle
         currentInputs = currentInputs.concat("=")
       }
 
-      val encoded = java.util.Base64.getEncoder.encode(currentInputs.toString.getBytes())
+      val encoded =
+        java.util.Base64.getEncoder.encode(currentInputs.toString.getBytes())
 
       for ((c, i) <- currentInputs.zipWithIndex) {
         dut.io.input.bits(i).poke(c)
@@ -39,16 +45,18 @@ class Base64WrapperTest extends AnyFlatSpec with ChiselScalatestTester {
   behavior of "Base64Wrapper"
 
   // input strings
-  val lol     = "lol"
-  val ucsc    = "University of California Santa Cruz"
-  val marquez = "Many years later as he faced the firing squad colonel Aureliano Buendia " +
-                "was to remember that distant afternoon when his father took him to discover ice"
-  val herbert = "He felt the bubble lift him, felt it break and the dust whirlpool engulf him, " +
-                "dragging him down into cool darkness. For a moment, the sensation of coolness " +
-                "and the moisture were blessed relief. Then, as his planet killed him, it occurred " +
-                "to Kynes that his father and all the other scientists were wrong, that the most " +
-                "persistent principles of the universe were accident and error. " +
-                "Even the hawks could appreciate these facts."
+  val lol = "lol"
+  val ucsc = "University of California Santa Cruz"
+  val marquez =
+    "Many years later as he faced the firing squad colonel Aureliano Buendia " +
+      "was to remember that distant afternoon when his father took him to discover ice"
+  val herbert =
+    "He felt the bubble lift him, felt it break and the dust whirlpool engulf him, " +
+      "dragging him down into cool darkness. For a moment, the sensation of coolness " +
+      "and the moisture were blessed relief. Then, as his planet killed him, it occurred " +
+      "to Kynes that his father and all the other scientists were wrong, that the most " +
+      "persistent principles of the universe were accident and error. " +
+      "Even the hawks could appreciate these facts."
 
   // test the Base64Wrapper state machine one different input strings with different input sizes
   val t = new WrapperInterface
@@ -76,13 +84,11 @@ class Base64Test extends AnyFlatSpec with ChiselScalatestTester {
 
   it should "do a simple encode of exactly 3 bytes" in {
     val str = "lol"
-    val params = Base64Params(str.length, Base64Params.DEFAULT_BASE_CHARS)
+    val params = Base64EncodingParams(str.length, Base64Params.DEFAULT_BASE_CHARS)
     val encoded = java.util.Base64.getEncoder.encode(str.getBytes())
     // Note: This technically just maps a single character to a byte
     // I don't think this is technically correct since it can be a base16 ?
-    test(new Base64(params)) { dut =>
-      dut.io.mode.poke(false.B)
-
+    test(new Base64Encoder(params)) { dut =>
       for ((c, i) <- str.zipWithIndex) {
         dut.io.input(i).poke(c.toByte.U(8.W))
       }
@@ -96,12 +102,11 @@ class Base64Test extends AnyFlatSpec with ChiselScalatestTester {
 
   it should "do a simple encode of exactly 1 bytes (2-padding)" in {
     val str = "M"
-    val params = Base64Params(str.length, Base64Params.DEFAULT_BASE_CHARS)
+    val params = Base64EncodingParams(str.length, Base64Params.DEFAULT_BASE_CHARS)
     val encoded = java.util.Base64.getEncoder.encode(str.getBytes())
     // Note: This technically just maps a single character to a byte
     // I don't think this is technically correct since it can be a base16 ?
-    test(new Base64(params)) { dut =>
-      dut.io.mode.poke(false.B)
+    test(new Base64Encoder(params)) { dut =>
 
       for ((c, i) <- str.zipWithIndex) {
         dut.io.input(i).poke(c.toByte.U(8.W))
@@ -116,13 +121,11 @@ class Base64Test extends AnyFlatSpec with ChiselScalatestTester {
 
   it should "do a simple encode of exactly 2 bytes (1-padding)" in {
     val str = "Ma"
-    val params = Base64Params(str.length, Base64Params.DEFAULT_BASE_CHARS)
+    val params = Base64EncodingParams(str.length, Base64Params.DEFAULT_BASE_CHARS)
     val encoded = java.util.Base64.getEncoder.encode(str.getBytes())
     // Note: This technically just maps a single character to a byte
     // I don't think this is technically correct since it can be a base16 ?
-    test(new Base64(params)) { dut =>
-      dut.io.mode.poke(false.B)
-
+    test(new Base64Encoder(params)) { dut =>
       for ((c, i) <- str.zipWithIndex) {
         dut.io.input(i).poke(c.toByte.U(8.W))
       }
@@ -136,13 +139,11 @@ class Base64Test extends AnyFlatSpec with ChiselScalatestTester {
 
   it should "do a simple encode of exactly 5 bytes (1-padding)" in {
     val str = "Many "
-    val params = Base64Params(str.length, Base64Params.DEFAULT_BASE_CHARS)
+    val params = Base64EncodingParams(str.length, Base64Params.DEFAULT_BASE_CHARS)
     val encoded = java.util.Base64.getEncoder.encode(str.getBytes())
     // Note: This technically just maps a single character to a byte
     // I don't think this is technically correct since it can be a base16 ?
-    test(new Base64(params)).withAnnotations(Seq(WriteVcdAnnotation)) { dut =>
-      dut.io.mode.poke(false.B)
-
+    test(new Base64Encoder(params)).withAnnotations(Seq(WriteVcdAnnotation)) { dut =>
       for ((c, i) <- str.zipWithIndex) {
         dut.io.input(i).poke(c.toByte.U(8.W))
       }
@@ -161,12 +162,11 @@ class Base64Test extends AnyFlatSpec with ChiselScalatestTester {
 
   it should "do a simple encode of larger than 3 bytes divisible by 3" in {
     val str = "Many hands make light work."
-    val params = Base64Params(str.length, Base64Params.DEFAULT_BASE_CHARS)
+    val params = Base64EncodingParams(str.length, Base64Params.DEFAULT_BASE_CHARS)
     val encoded = java.util.Base64.getEncoder.encode(str.getBytes())
     // Note: This technically just maps a single character to a byte
     // I don't think this is technically correct since it can be a base16 ?
-    test(new Base64(params)) { dut =>
-      dut.io.mode.poke(false.B)
+    test(new Base64Encoder(params)) { dut =>
       for ((c, i) <- str.zipWithIndex) {
         dut.io.input(i).poke(c.toByte.U(8.W))
       }
@@ -179,6 +179,40 @@ class Base64Test extends AnyFlatSpec with ChiselScalatestTester {
         dut.io.output.bits(i + 3).expect(encoded(i + 3).U(8.W))
 
         dut.clock.step()
+      }
+    }
+  }
+
+  it should "do a simple decode of 4 characters" in {
+    val str = "bG9s"
+    val decoded = java.util.Base64.getDecoder.decode(str)
+    // println( (decoded.map(_.toChar)).mkString )
+    val params = Base64DecodingParams(str.length, Base64Params.DEFAULT_BASE_CHARS)
+    test(new Base64Decoder(params)) { dut =>
+      for ((c, i) <- str.zipWithIndex) {
+        dut.io.input(i).poke(c.toByte.U(8.W))
+      }
+
+      dut.io.output.valid.expect(true.B)
+      for ((c, i) <- decoded.zipWithIndex) {
+        dut.io.output.bits(i).expect(c.U(8.W))
+      }
+    }
+  }
+
+  it should "do a simple decode of 8 characters" in {
+    val str = "YWJjZGVm"
+    val decoded = java.util.Base64.getDecoder.decode(str)
+    // println( (decoded.map(_.toChar)).mkString )
+    val params = Base64DecodingParams(str.length, Base64Params.DEFAULT_BASE_CHARS)
+    test(new Base64Decoder(params)) { dut =>
+      for ((c, i) <- str.zipWithIndex) {
+        dut.io.input(i).poke(c.toByte.U(8.W))
+      }
+
+      dut.io.output.valid.expect(true.B)
+      for ((c, i) <- decoded.zipWithIndex) {
+        dut.io.output.bits(i).expect(c.U(8.W))
       }
     }
   }
