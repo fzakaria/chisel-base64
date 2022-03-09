@@ -10,11 +10,12 @@ object Base64Params {
 
 abstract class Base64Params {
   def sizeInBytes: Int
-  def base64Chars : String
+  def base64Chars: String
   val paddingChar = '='
 }
 
-case class Base64EncodingParams(val sizeInBytes: Int, val base64Chars: String) extends Base64Params {
+case class Base64EncodingParams(val sizeInBytes: Int, val base64Chars: String)
+    extends Base64Params {
   require(sizeInBytes > 0)
   require(base64Chars.length == 64)
   // We need to divide by 3 since 4 digits can represent 3 bytes
@@ -23,13 +24,14 @@ case class Base64EncodingParams(val sizeInBytes: Int, val base64Chars: String) e
   val paddedLength: Int = 4 * Math.ceil(sizeInBytes / 3.0).toInt
 }
 
-case class Base64DecodingParams(val sizeInBytes: Int, val base64Chars: String) extends Base64Params {
+case class Base64DecodingParams(val sizeInBytes: Int, val base64Chars: String)
+    extends Base64Params {
   require(sizeInBytes > 0)
   require(base64Chars.length == 64)
 
   // the maximum length will be to divide into 4 characters which represent 3 octets.
   // this is the maximum because there can be padding
-  val maxDecodedLength : Int = 3 * (sizeInBytes / 4.0).toInt
+  val maxDecodedLength: Int = 3 * (sizeInBytes / 4.0).toInt
 }
 
 class Base64Decoder(val p: Base64DecodingParams) extends Module {
@@ -47,7 +49,7 @@ class Base64Decoder(val p: Base64DecodingParams) extends Module {
   val (index, wrapped) = Counter(0 until p.sizeInBytes by 4, true.B, false.B)
   val (outputIndex, outputIndexWrapped) =
     Counter(0 until p.maxDecodedLength by 3, true.B, false.B)
-    
+
   // Note: these can be limited to 6 width bits
   val char1 = mapping.indexWhere(_ === io.input(index))(5, 0)
   val char2 = mapping.indexWhere(_ === io.input(index +& 1.U))(5, 0)
@@ -65,9 +67,9 @@ class Base64Decoder(val p: Base64DecodingParams) extends Module {
   io.output.bits(outputIndex +& 2.U) := byte3
 
   // debugging
-  printf(
-   p"input: ${io.input} output: ${io.output.bits}\n"
-  )
+  //printf(
+  //  p"input: ${io.input} output: ${io.output.bits}\n"
+  //)
 }
 
 class Base64Encoder(val p: Base64EncodingParams) extends Module {
