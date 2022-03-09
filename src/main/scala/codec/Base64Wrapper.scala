@@ -4,18 +4,19 @@ import chisel3._
 import chisel3.util._
 
 object Base64Wrapper {
-  val idle :: working :: Nil = Enum(2)
+  val idle :: encode :: decode :: Nil = Enum(3)
 }
 
 case class Base64WrapperParams(
-    val bytesPerCycle: Int = 3,
+    val bytesPerCycleForEnc: Int = 3,
     val base64Chars: String = Base64Params.DEFAULT_BASE_CHARS
 ) {
-  require(bytesPerCycle > 0)
-  require(bytesPerCycle % 3 == 0)
+  require(bytesPerCycleForEnc > 0)
+  require(bytesPerCycleForEnc % 3 == 0)
   require(base64Chars.length == 64)
-  val paddedLength: Int = 4 * Math.ceil(bytesPerCycle / 3.0).toInt
-  val numBase64Mods: Int = bytesPerCycle / 3
+  val paddedLength: Int = 4 * Math.ceil(bytesPerCycleForEnc / 3.0).toInt
+  val numEncoders: Int = bytesPerCycleForEnc / 3
+  val numDecoders: Int = paddedLength / 4
 }
 
 // This is a state machine that utilizes the Base64 module. It takes in
@@ -28,21 +29,34 @@ class Base64Wrapper(p: Base64WrapperParams) extends Module {
   val state = RegInit(idle)
 
   val io = IO(new Bundle {
-    val input = Flipped(Valid(Vec(p.bytesPerCycle, Byte())))
-    // false => encode
-    // true => decode
-    val mode = Input(Bool())
+    val input = Flipped(Valid(Vec(p.paddedLength, Byte())))
+    val encode = Input(Bool()) // true -> encoding, false -> decoding
     val output = Valid(Vec(p.paddedLength, Byte()))
   })
 
-  // instantiate Seq of Base64 Modules
-  val b64params = Base64EncodingParams(3, p.base64Chars) // always take in 3 bytes
-  val b64mods = Seq.fill(p.numBase64Mods)(Module(new Base64Encoder(b64params)))
-  val equalsChar = '='.toByte.U(8.W)
-  b64mods.zipWithIndex foreach {
-    case (b, i) => {
+  // instantiate Seq of Base64Encoder Modules
+  val b64paramsenc =
+    Base64EncodingParams(3, p.base64Chars) // always take in 3 bytes
+  val encoders =
+    Seq.fill(p.numEncoders)(Module(new Base64Encoder(b64paramsenc)))
+  encoders.zipWithIndex foreach {
+    case (enc, i) => {
       for (j <- 0 until 3) {
-        b.io.input(j) := io.input.bits((3 * i) + j)
+        enc.io.input(j) := io.input.bits((3 * i) + j)
+      }
+    }
+  }
+
+  // instantiate Seq of Base64Decoder Modules
+  val b64paramsdec =
+    Base64DecodingParams(4, p.base64Chars) // always take in 4 bytes
+  val decoders =
+    Seq.fill(p.numDecoders)(Module(new Base64Decoder(b64paramsdec)))
+  val equalsChar = '='.toByte.U(8.W)
+  decoders.zipWithIndex foreach {
+    case (dec, i) => {
+      for (j <- 0 until 4) {
+        dec.io.input(j) := io.input.bits((4 * i) + j)
       }
     }
   }
@@ -56,28 +70,43 @@ class Base64Wrapper(p: Base64WrapperParams) extends Module {
     is(idle) {
       io.output.valid := false.B
       when(io.input.valid) {
-        state := working
+        when(io.encode) {
+          state := encode
+        }.otherwise {
+          state := decode
+        }
       }
     }
-    is(working) {
-      when(b64mods(0).io.output.valid) {
+    is(encode) {
+      when(encoders(0).io.output.valid) {
         state := idle
         io.output.valid := true.B
-        b64mods.zipWithIndex foreach {
-          case (b, i) => {
+        encoders.zipWithIndex foreach {
+          case (enc, i) => {
             for (j <- 0 until 4) {
-              io.output.bits((4 * i) + j) := b.io.output.bits(j)
+              io.output.bits((4 * i) + j) := enc.io.output.bits(j)
             }
           }
         }
-
+      }
+    }
+    is(decode) {
+      when(decoders(0).io.output.valid) {
+        state := idle
+        io.output.valid := true.B
+        decoders.zipWithIndex foreach {
+          case (dec, i) => {
+            for (j <- 0 until 3) {
+              io.output.bits((3 * i) + j) := dec.io.output.bits(j)
+            }
+          }
+        }
       }
     }
   }
 
   // debugging
-  // printf(
-  //  p"state(${state}) io.input.bits(${io.input.bits}) io.output.bits(${io.output.bits}) paddedlength(${p.paddedLength})\n"
-  // )
-
+  /*printf(
+    p"state(${state}) io.input.bits(${io.input.bits}) io.output.bits(${io.output.bits}) paddedlength(${p.paddedLength})\n"
+   )*/
 }
